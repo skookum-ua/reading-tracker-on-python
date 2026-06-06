@@ -3,11 +3,37 @@ from textual.app import App, ComposeResult
 from textual.screen import Screen
 from textual.widgets import Header, Footer, Button, Static, Input
 
+class AskForPage(Screen):
+
+    BINDINGS = [("escape", "app.pop_screen", "Cancel/Go Back"),
+                ("q", "quit", "Quit")]
+
+    def compose(self) -> ComposeResult:
+        yield Static("--- Read Now ---")
+        yield Input(placeholder="Type starting page", id="input_st_page", type="integer")
+        yield Footer()
+    
+    def action_set_starting_page(self):
+        self.app.current_page = self.query_one("#input_st_page", Input).value # type: ignore
+        self.query_one("#input_st_page", Input).value = ""
+        self.app.switch_screen(ActiveSession())
+        
+
+class ActiveSession(Screen):
+     
+    BINDINGS = [("escape", "app.pop_screen", "Cancel/Go Back")]
+
+    def compose(self) -> ComposeResult:
+        yield Static("--- Read Now ---")
+        yield Button("Save Book", id="save_btn", variant="success")
+        yield Footer()
+
 class AddNewBook(Screen):
 
     AUTO_FOCUS = "#input_title"
 
-    BINDINGS = [("escape", "app.pop_screen", "Cancel/Go Back")]
+    BINDINGS = [("escape", "app.pop_screen", "Cancel/Go Back"),
+                ("q", "quit", "Quit")]
 
     def compose(self) -> ComposeResult:
         yield Static("--- Add a New Book ---")
@@ -42,6 +68,15 @@ class AddNewBook(Screen):
 
 class BookReaderApp(App):
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.current_book = ""
+        self.current_page = ""
+        self.all_books = ""
+        self.all_sessions = ""
+        self.ordered_books = ""
+        self.
+
     BINDINGS = [
         ("d", "toggle_dark", "Toggle Dark Mode"), 
         ("q", "quit", "Quit")
@@ -63,8 +98,8 @@ class BookReaderApp(App):
     def on_button_pressed(self, event: Button.Pressed) -> None:
 
         if event.button.id == "timer_btn":
+            self.push_screen(AskForPage())
 
-            self.notify("Timer started! (We will build this next)")
         if event.button.id == "new_book_btn":
             self.push_screen(AddNewBook())
 
