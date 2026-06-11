@@ -1,7 +1,9 @@
 from functions import *
 from textual.app import App, ComposeResult
 from textual.screen import Screen
-from textual.widgets import Header, Footer, Button, Static, Input
+from textual.widgets import Header, Footer, Button, Static, Input, DataTable, ListView, ListItem, Label
+from textual.reactive import reactive
+from textual.containers import Center, Vertical, Horizontal, Middle
 
 class AskForPage(Screen):
 
@@ -9,24 +11,61 @@ class AskForPage(Screen):
                 ("q", "quit", "Quit")]
 
     def compose(self) -> ComposeResult:
-        yield Static("--- Read Now ---")
+        yield Static("Enter starting page")
         yield Input(placeholder="Type starting page", id="input_st_page", type="integer")
+        yield Button("OK", id="ok_btn", variant="success")
         yield Footer()
     
     def action_set_starting_page(self):
         self.app.current_page = self.query_one("#input_st_page", Input).value # type: ignore
         self.query_one("#input_st_page", Input).value = ""
         self.app.switch_screen(ActiveSession())
-        
 
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "ok_btn":
+            self.action_set_starting_page()
+    
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self.action_set_starting_page()
+        
 class ActiveSession(Screen):
-     
+
     BINDINGS = [("escape", "app.pop_screen", "Cancel/Go Back")]
 
     def compose(self) -> ComposeResult:
         yield Static("--- Read Now ---")
-        yield Button("Save Book", id="save_btn", variant="success")
+        with Middle():
+            with Center():
+                yield Timer(id="timer")
+                yield Static( "Progress estimation: 0", id = "progress")
+        with Horizontal():
+
+                yield Button("Pause", id="pause_btn", variant="success")
+                yield Button("Continue", id="start_btn", variant="success")
+                yield Button("Save and Exit", id="end_session_btn", variant="success")
         yield Footer()
+
+    def on_mount(self):
+        self.watch(self.app, "session_time", self.update_label)
+        start = self.query_one("#start_btn", Button)
+        start.display = False
+
+    def update_label(self, new_time: int):
+        progress_label = self.query_one("#progress", Static)
+        progress_label.update(f"Progress estimation: %left{new_time}")
+
+    def on_button_pressed(self, event: Button.Pressed):
+        pause = self.query_one("#pause_btn", Button)
+        start = self.query_one("#start_btn", Button)
+        time = self.query_one("#timer", Timer)
+        if event.button.id == "start_btn":
+            time.start_timer()
+            start.display = False
+            pause.display = True
+        elif event.button.id == "pause_btn":
+            time.pause_timer()
+            start.display = True
+            pause.display = False
 
 class AddNewBook(Screen):
 
@@ -64,18 +103,43 @@ class AddNewBook(Screen):
     def on_input_submitted(self, event: Input.Submitted) -> None:
         self.focus_next()
         #self.action_add_book()
+    
+class Timer(Static):
 
+    def on_mount(self):
+        self.time = 0
+        self.display_update()
+        self.timer = self.set_interval(1.0, self.tick, pause=False)
+    
+    def tick(self):
+        self.time += 1
+        self.display_update()
+        self.app.session_time = self.time #type: ignore
+
+    def display_update(self):
+        min, sec = divmod(self.time, 60)
+        hour, min = divmod(min, 60)
+        self.update(f"Session Time: {hour:02d}:{min:02d}:{sec:02d}")
+
+    def start_timer(self):
+        self.timer.resume()
+
+    def pause_timer(self):
+        self.timer.pause()
 
 class BookReaderApp(App):
+
+    session_time = reactive(0)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.current_book = ""
         self.current_page = ""
-        self.all_books = ""
+        self.all_books = read_json(BOOKLIST)
         self.all_sessions = ""
         self.ordered_books = ""
-        self.
+        self.reading_speed = ""
+        
 
     BINDINGS = [
         ("d", "toggle_dark", "Toggle Dark Mode"), 
@@ -83,19 +147,25 @@ class BookReaderApp(App):
     ]
 
     def compose(self) -> ComposeResult:
-
         yield Header(show_clock=True)
-        yield Static("Welcome to your CLI Library!\n")
-        yield Input(placeholder="Type a new book title and press Enter...", id="new_book_input")
-        yield Button("Start Reading Session", id="timer_btn", variant="success")
-        yield Button("New book", id="new_book_btn", variant="success")
+        with Horizontal():
+            with Vertical():
+                yield Static("Welcome to your CLI Library!\n")
+                yield Button("Start Reading Session", id="timer_btn", variant="success")
+                yield Button("New book", id="new_book_btn", variant="success")
+            with ListView():
+                for book in self.all_books.items():
+                    display_text = f"{book[1]['title']} | {book[1]['num_pages']} | {book[1]['percent']}"
+                    yield ListItem(Label(display_text))
+
+
         yield Footer()
 
     def on_mount(self):
-        input = self.query_one("#new_book_input")
-        input.styles.display = "none"
+        pass
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
+
+    def on_button_pressed(self, event: Button.Pressed):
 
         if event.button.id == "timer_btn":
             self.push_screen(AskForPage())

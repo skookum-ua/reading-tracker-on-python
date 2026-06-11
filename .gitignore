@@ -1,4 +1,5 @@
 books/*
+config/*
 __pycache__/
 plan.txt
 .venv/*

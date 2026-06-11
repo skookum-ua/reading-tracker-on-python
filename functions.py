@@ -32,8 +32,21 @@ def update_book (book_id, field, data):
     old_books[book_id][field] = data
     write_json(BOOKLIST, old_books)
 
+def update_whole_book (book_id, data):
+    old_books = read_json(BOOKLIST)
+    old_books[book_id] = data
+    write_json(BOOKLIST, old_books)
+
 def new_session(book_id):
     start_time = datetime.now(timezone.utc)
 
-def save_config(current_book_id,):
-    pass
+def save_config(field, data):
+    config = read_json(CONFIG)
+    config[field] = data
+    write_json(CONFIG, config)
+
+def read_config():
+    if not os.path.isfile(CONFIG):
+        raise Exception("no file")
+    with open (CONFIG, "r") as f:
+        return json.load(f)
