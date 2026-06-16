@@ -26,6 +26,7 @@ def new_book(name, num_pages, author = None, current_page = 0,):
         book_id = 0
     old_books[book_id] = new_book
     write_json(BOOKLIST, old_books)
+    return book_id
 
 def update_book (book_id, field, data):
     old_books = read_json(BOOKLIST)
