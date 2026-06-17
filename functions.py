@@ -4,6 +4,12 @@ from pathlib import Path
 from constants import *
 from datetime import datetime, timezone
 
+def check_json_files(path):
+    if not os.path.isfile(path):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as f:
+            json.dump("{}", f)
+
 def write_json (bookpath, booklist):
     if not os.path.isfile(bookpath):
         os.makedirs(os.path.dirname(bookpath), exist_ok=True)

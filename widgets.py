@@ -42,3 +42,17 @@ class BookInList(Vertical):
             yield Label(str(self.book_pages), classes="col_pages")
             yield Label(str(self.book_progress), classes="col_progress")
 
+class BookInfo(Vertical):
+
+    def __init__(self, title: str, pages: int, progress: int, **kwargs):
+        super().__init__(**kwargs)
+        self.book_title = title
+        self.book_pages = pages
+        self.book_progress = progress
+        
+    def compose(self) -> ComposeResult:
+        yield Label(f"[b]{self.book_title}[/b]", classes="row_title")
+        with Horizontal(classes="row_details"):
+            yield Label(str(self.book_pages), classes="col_pages")
+            yield Label(str(self.book_progress), classes="col_progress")
+
