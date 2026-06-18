@@ -44,15 +44,19 @@ class BookInList(Vertical):
 
 class BookInfo(Vertical):
 
-    def __init__(self, title: str, pages: int, progress: int, **kwargs):
+    def __init__(self, book , **kwargs):
         super().__init__(**kwargs)
-        self.book_title = title
-        self.book_pages = pages
-        self.book_progress = progress
+        self.book_title = book['title']
+        self.book_pages = book['num_pages']
+        self.current_page = book['current_page']
+        self.reading_time = book['reading_time']
+        self.book_progress = book['percent']
+        self.reading_speed = book['reading_speed']
         
     def compose(self) -> ComposeResult:
         yield Label(f"[b]{self.book_title}[/b]", classes="row_title")
         with Horizontal(classes="row_details"):
-            yield Label(str(self.book_pages), classes="col_pages")
-            yield Label(str(self.book_progress), classes="col_progress")
-
+            yield Label(f"Page: {self.current_page}/{str(self.book_pages)}", classes="col_pages")
+            yield Label(f"Completed: {str(self.book_progress)}%", classes="col_progress")
+        yield Label(f"Reading time: {str(self.reading_time)}", classes="col_time")
+        yield Label(f"Reading speed: {str(self.reading_speed)}", classes="col_speed")

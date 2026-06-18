@@ -1,4 +1,3 @@
-import main
 from typing import cast
 from functions import *
 from widgets import *
@@ -19,8 +18,12 @@ class BookReaderApp(App):
         super().__init__(**kwargs)
         self.current_page = 0
         self.all_books = read_json(BOOKLIST)
+        self.config = read_json(CONFIG)
         self.all_sessions = ""
-        self.ordered_books = deque([])
+        try:
+            self.ordered_books = deque(self.config['ordered_books'])
+        except:
+            self.ordered_books = deque([])
         self.reading_speed = ""
         try:
             self.current_book = self.ordered_books[0]
@@ -39,9 +42,11 @@ class BookReaderApp(App):
             with Vertical():
                 yield Static("Welcome to your CLI Library!\n")
                 with Horizontal():
-                    yield Button("Start Reading Session", id="timer_btn", variant="success")
-                    yield Button("New book", id="new_book_btn", variant="success")
-            yield BookInfo(id="bookinfo", title = self.app.all_books[str(self.app.current_book)]['title'], pages = self.app.all_books[str(self.app.current_book)]['num_pages'], progress = self.app.all_books[str(self.app.current_book)]['percent'])
+                    yield Button("New book", id="new_book_btn", variant="success",classes="button")
+            with Vertical(id="middle"):
+                if self.current_book != 0:
+                    yield BookInfo(id="bookinfo", book = self.app.all_books[str(self.app.current_book)]) #type: ignore
+                yield Button("Start Reading Session", id="timer_btn", variant="success")
             yield ListView(id="mylist")  
         yield Footer()
 
@@ -57,16 +62,26 @@ class BookReaderApp(App):
             new_item = ListItem(display_text)
             new_item.book_id = book_id # type: ignore
             my_list.append(new_item)
+    
+    async def refresh_bookinfo(self):
+        try:
+            bookinfo = self.query_one("#bookinfo", BookInfo)
+            await bookinfo.remove()
+        except:
+            pass
+        middle = self.query_one("#middle", Vertical)
+        middle.mount(BookInfo(id="bookinfo", book = self.app.all_books[str(self.app.current_book)])) #type: ignore
 
     def on_mount(self):
         self.refresh_list()
 
-    def on_list_view_selected(self, event: ListView.Selected):
+    async def on_list_view_selected(self, event: ListView.Selected):
         clicked_item = event.item
         book_id = getattr(clicked_item, "book_id", None)
-        if book_id:
+        if book_id != None:
             self.current_book = book_id
             self.notify(f"You clicked the book with ID: {book_id}")
+            await self.refresh_bookinfo()
 
     def on_button_pressed(self, event: Button.Pressed):
 
@@ -119,6 +134,10 @@ class ActiveSession(Screen):
 
     BINDINGS = [("escape", "app.pop_screen", "Cancel/Go Back")]
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.starting_page = self.app.current_page #type: ignore
+        
     def compose(self) -> ComposeResult:
         yield Static("--- Read Now ---")
         with Middle():
@@ -157,13 +176,18 @@ class ActiveSession(Screen):
             time.pause_timer()
             self.app.push_screen(AskForPage("Enter stop page", True), callback= self.save_and_exit)
 
-    def save_and_exit(self, result: object = None):
+    async def save_and_exit(self, result: object = None):
         time = self.query_one("#timer", Timer).time
         self.app.all_books[str(self.app.current_book)]['reading_time'] += time #type: ignore
+        self.app.all_books[str(self.app.current_book)]['reading_speed'] = 1 / ((int(self.app.current_page) - int(self.starting_page)) / int(time) / 60) # minutes per page #type: ignore
+        self.app.all_books[str(self.app.current_book)]['percent'] = round(int(self.app.current_page) / int(self.app.all_books[str(self.app.current_book)]['num_pages']) * 100, 2) #type: ignore
         self.app.ordered_books.remove(self.app.current_book) #type: ignore
         self.app.ordered_books.appendleft(self.app.current_book) #type: ignore
+        self.app.config['ordered_books'] = list(self.app.ordered_books) #type: ignore
+        write_json(CONFIG, self.app.config) #type: ignore
         write_json(BOOKLIST, self.app.all_books) #type: ignore
         self.app.refresh_list() #type: ignore
+        await self.app.refresh_bookinfo() #type: ignore
         self.app.pop_screen()
             
 class AddNewBook(Screen):
@@ -190,7 +214,10 @@ class AddNewBook(Screen):
                 pages_data = 0
 
         new_book_id = new_book(title_data, pages_data)
+        self.app.all_books = read_json(BOOKLIST) #type: ignore
         self.app.ordered_books.appendleft(new_book_id) #type: ignore
+        self.app.config['ordered_books'] = list(self.app.ordered_books) #type: ignore
+        write_json(CONFIG, self.app.config) #type: ignore
 
 
         self.query_one("#input_pages", Input).value = ""

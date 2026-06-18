@@ -24,9 +24,20 @@ CSS_CONST  = """
         margin-right: 1;
     }
 
-     .col_progress {
+    .col_progress {
         width: auto;
         opacity: 0.7;
+        margin-right: 1;
+    }
+
+    .col_time {
+        width: auto;
+        opacity: 0.7;
+        margin-right: 1;
+    }
+    .button {
+        height: auto; 
+        width: auto;
         margin-right: 1;
     }
     """
