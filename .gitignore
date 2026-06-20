@@ -1,6 +1,7 @@
 books/*
 config/*
 sessions/*
+demo.tape
 __pycache__/
 plan.txt
 .venv/*

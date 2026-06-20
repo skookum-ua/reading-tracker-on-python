@@ -11,7 +11,7 @@ from textual.containers import Center, Vertical, Horizontal, Middle
 
 if __name__ == "__main__":
     check_json_files(BOOKLIST)
-    check_json_files(CONFIG)
+    create_config(CONFIG)
     check_json_files(SESSIONS)
     app = BookReaderApp()
     app.run()

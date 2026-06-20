@@ -30,21 +30,22 @@ class Timer(Static):
 
 class BookInList(Vertical):
 
-    def __init__(self, title: str, pages: int, progress: int, **kwargs):
+    def __init__(self, book, **kwargs):
         super().__init__(**kwargs)
-        self.book_title = title
-        self.book_pages = pages
-        self.book_progress = progress
+        self.book_title = book.get('title')
+        self.book_pages = book.get('num_pages')
+        self.book_progress = book.get('percent')
+        self.book_current_page = book.get('current_page')
         
     def compose(self) -> ComposeResult:
         yield Label(f"[b]{self.book_title}[/b]", classes="row_title")
         with Horizontal(classes="row_details"):
-            yield Label(str(self.book_pages), classes="col_pages")
-            yield Label(str(self.book_progress), classes="col_progress")
+            yield Label(f"Page: {self.book_current_page}/{str(self.book_pages)}", classes="col_pages")
+            yield Label(f"{str(self.book_progress)}%", classes="col_progress")
 
 class BookInfo(Vertical):
 
-    def __init__(self, book , **kwargs):
+    def __init__(self, book, **kwargs):
         super().__init__(**kwargs)
         self.book_title = book['title']
         self.book_pages = book['num_pages']
@@ -54,9 +55,45 @@ class BookInfo(Vertical):
         self.reading_speed = book['reading_speed']
         
     def compose(self) -> ComposeResult:
+        min, sec = divmod(self.reading_time, 60)
+        hour, min = divmod(min, 60)
+        min_speed, sec_speed = divmod(self.reading_speed, 60)
+        yield Label(f"[b]Selected book:[/b]", classes="row_title")
         yield Label(f"[b]{self.book_title}[/b]", classes="row_title")
         with Horizontal(classes="row_details"):
             yield Label(f"Page: {self.current_page}/{str(self.book_pages)}", classes="col_pages")
             yield Label(f"Completed: {str(self.book_progress)}%", classes="col_progress")
-        yield Label(f"Reading time: {str(self.reading_time)}", classes="col_time")
-        yield Label(f"Reading speed: {str(self.reading_speed)}", classes="col_speed")
+        yield Label(f"Reading time: {hour:02d}h {min:02d}m {sec:02d}s", classes="col_time")
+        yield Label(f"Reading speed: {int(min_speed)}m {int(sec_speed)}s /page", classes="col_speed")
+
+class UserInfo(Vertical):
+
+    def __init__(self, booklist, config, **kwargs):
+        super().__init__(**kwargs)
+        self.booklist = booklist
+        self.config = config
+        
+    def compose(self) -> ComposeResult:
+
+        reading_speed = 0
+        num_books = 0
+        sessions = self.config['sessions']
+        reading_time = self.config['all_reading_time']
+
+        for book in self.booklist.items():
+            reading_speed += int(book[1]['reading_speed'])
+            num_books += 1
+        try:
+            reading_speed = reading_speed / num_books
+        except:
+            reading_speed = 0
+
+        min, sec = divmod(reading_time, 60)
+        hour, min = divmod(min, 60)
+        min_speed, sec_speed = divmod(reading_speed, 60)
+        yield Label(f"[b]User statistics:[/b]", classes="row_title")
+
+        yield Label(f"Total reading time: {hour:02d}h {min:02d}m {sec:02d}s", classes="col_time")
+        yield Label(f"Average speed: {int(min_speed)}m {int(sec_speed)}s /page", classes="col_speed")
+        yield Label(f"Sessions: {sessions}", classes="col_sessions")
+        
